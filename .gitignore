@@ -1,0 +1,7 @@
+build
+
+# QtCreator
+*.creator
+*.config
+*.files
+*.includes
