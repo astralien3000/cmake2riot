@@ -1,4 +1,6 @@
+# Cmake
 build
+install
 
 # QtCreator
 *.creator

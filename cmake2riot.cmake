@@ -21,6 +21,15 @@ set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_C_COMPILER_WORKS 1)
 set(CMAKE_CXX_COMPILER_WORKS 1)
 
+# Define BOARD
+if(NOT DEFINED BOARD)
+    if(DEFINED ENV{BOARD})
+        set(BOARD $ENV{BOARD})
+    else()
+        set(BOARD native)
+    endif()
+endif()
+
 ################################################################
 # Replace try_compile
 ################################################################
@@ -72,15 +81,32 @@ macro(add_executable target)
     set(MAKEFILE_PATH "${CMAKE_CURRENT_BINARY_DIR}/cmake2riot/${target}/Makefile")
     file(WRITE  "${MAKEFILE_PATH}" "APPLICATION = ${target}\n")
     file(APPEND "${MAKEFILE_PATH}" "RIOTBASE ?= $ENV{HOME}/RIOT\n")
-    file(APPEND "${MAKEFILE_PATH}" "BOARD = native\n")
+    file(APPEND "${MAKEFILE_PATH}" "BOARD ?= ${BOARD}\n")
     file(APPEND "${MAKEFILE_PATH}" "QUIET ?= 1\n")
     file(APPEND "${MAKEFILE_PATH}" "WERROR ?= 0\n")
     file(APPEND "${MAKEFILE_PATH}" "include $(RIOTBASE)/Makefile.include\n")
 
-    # Add custom target to compile the project
+    # Add custom target to compile the target
     add_custom_target(
-        ${target}.elf ALL "make"
+        ${target} ALL
+        COMMAND make
         DEPENDS ${${target}_sources} ${MAKEFILE_PATH}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cmake2riot/${target}
+        )
+
+    # Add custom target to flash the target
+    add_custom_target(
+        ${target}-flash
+        COMMAND make flash
+        DEPENDS ${target}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cmake2riot/${target}
+        )
+
+    # Add custom target to run "make term" on the target
+    add_custom_target(
+        ${target}-term
+        COMMAND make term
+        DEPENDS ${target}
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cmake2riot/${target}
         )
 endmacro()
@@ -131,7 +157,7 @@ macro(install)
     # Install native elf files in bin directory
     foreach(target ${args_TARGETS})
         _install(
-            PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/cmake2riot/${target}/bin/native/${target}.elf
+            PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/cmake2riot/${target}/bin/${BOARD}/${target}.elf
             DESTINATION bin
             )
     endforeach(target)
